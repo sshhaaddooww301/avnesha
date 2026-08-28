@@ -14,6 +14,7 @@ from app.models import DetectionRule as DetectionRuleModel, SystemSetting
 from app.engine.rules import RULE_REGISTRY
 from app.api.settings import DEFAULT_SETTINGS
 from app.websocket.manager import ws_manager
+from app.security.ip_firewall import ip_firewall
 
 # API Routers
 from app.api.dashboard import router as dashboard_router
@@ -73,6 +74,9 @@ async def seed_defaults():
 async def lifespan(app: FastAPI):
     # Startup: ensure tables exist and seed initial defaults with retry
     logger.info("Creating database tables if not existing...")
+    # Always ensure lockdown is OFF on startup (prevents getting locked out after restart)
+    ip_firewall.toggle_lockdown(False)
+    logger.info("QDS Security Firewall: Lockdown mode DEACTIVATED on startup.")
     for attempt in range(1, 6):
         try:
             async with engine.begin() as conn:

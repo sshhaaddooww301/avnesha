@@ -1,0 +1,227 @@
+"""
+Main FastAPI application entry point for QDS SIEM.
+"""
+
+import logging
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
+
+from app.config import settings
+from app.database import engine, Base, async_session_factory
+from app.models import DetectionRule as DetectionRuleModel, SystemSetting
+from app.engine.rules import RULE_REGISTRY
+from app.api.settings import DEFAULT_SETTINGS
+from app.websocket.manager import ws_manager
+
+# API Routers
+from app.api.dashboard import router as dashboard_router
+from app.api.events import router as events_router
+from app.api.threats import router as threats_router
+from app.api.simulator import router as simulator_router
+from app.api.ledger import router as ledger_router
+from app.api.reports import router as reports_router
+from app.api.pdf_report import router as pdf_report_router
+from app.api.settings import router as settings_router
+from app.test_lab.router import router as test_lab_router
+from app.api.hardware import router as hardware_router
+from app.api.defense import router as defense_router
+from app.api.security import router as security_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger("qds.main")
+
+
+async def seed_defaults():
+    """Seed detection rules and default settings if not already in DB."""
+    async with async_session_factory() as session:
+        # Seed rules
+        for rule_id, rule_obj in RULE_REGISTRY.items():
+            result = await session.execute(
+                select(DetectionRuleModel).where(DetectionRuleModel.rule_id == rule_id)
+            )
+            existing = result.scalar_one_or_none()
+            if not existing:
+                session.add(
+                    DetectionRuleModel(
+                        rule_id=rule_id,
+                        name=rule_obj.name,
+                        description=rule_obj.description,
+                        enabled=True,
+                        parameters={},
+                    )
+                )
+
+        # Seed settings
+        for key, val in DEFAULT_SETTINGS.items():
+            result = await session.execute(
+                select(SystemSetting).where(SystemSetting.key == key)
+            )
+            existing = result.scalar_one_or_none()
+            if not existing:
+                session.add(SystemSetting(key=key, value={"value": val}))
+
+        await session.commit()
+        logger.info("Database rules and default settings initialized.")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: ensure tables exist and seed initial defaults
+    logger.info("Creating database tables if not existing...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    await seed_defaults()
+    logger.info("QDS SIEM Backend is ready.")
+    yield
+    # Shutdown
+    await engine.dispose()
+    logger.info("Database connections closed.")
+
+
+app = FastAPI(
+    title="Quantum-Inspired Cyber Threat Detection (QDS) SIEM API",
+    version="1.0.0",
+    description="SIEM Backend for Quantum Digital Signature environments with real-time detection, statistical analysis, and tamper-evident audit ledger.",
+    lifespan=lifespan,
+)
+
+# Security Middleware: IP Firewall + Rate Limiting + Security Headers
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
+from app.security.ip_firewall import ip_firewall
+from app.security.rate_limiter import rate_limiter
+
+class SecurityEngineMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        path = request.url.path
+
+        # 1. IP Firewall Check (except for internal health checks)
+        if not path.startswith("/api/health"):
+            allowed, block_info = ip_firewall.check_ip(client_ip)
+            if not allowed:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "error": "IP_ACCESS_DENIED",
+                        "message": "Connection terminated by QDS Security Firewall",
+                        "firewall_telemetry": block_info,
+                    },
+                )
+
+            # 2. Rate Limiting Check on API routes
+            if path.startswith("/api/"):
+                rl_allowed, rl_info = rate_limiter.check_rate_limit(client_ip)
+                if not rl_allowed:
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "error": "RATE_LIMIT_EXCEEDED",
+                            "message": "Too many requests. Temporary throttle active.",
+                            "rate_limit_info": rl_info,
+                        },
+                    )
+
+        # 3. Process Request
+        response: Response = await call_next(request)
+
+        # 4. Attach Security Headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["X-QDS-Defense-Posture"] = "ACTIVE_HARDENED"
+        return response
+
+app.add_middleware(SecurityEngineMiddleware)
+
+# CORS Configuration (Supports Localhost & Multi-Laptop LAN Demo)
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]{1,3}\.[0-9]{1,3})(:[0-9]+)?$",
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# Mount Routers
+app.include_router(dashboard_router)
+app.include_router(events_router)
+app.include_router(threats_router)
+app.include_router(simulator_router)
+app.include_router(ledger_router)
+app.include_router(reports_router)
+app.include_router(pdf_report_router)
+app.include_router(settings_router)
+app.include_router(test_lab_router)
+app.include_router(hardware_router)
+app.include_router(defense_router)
+app.include_router(security_router)
+
+
+@app.get("/api/health")
+async def health_check():
+    """Backend health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": "QDS SIEM Detection Engine",
+        "active_ws_clients": ws_manager.connection_count,
+    }
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """Real-time WebSocket connection for live SOC dashboard stream with flood protection."""
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Enforce max payload size (16KB) to prevent buffer exhaustion attacks
+            if len(data) > 16384:
+                await websocket.close(code=1009, reason="Payload too large")
+                break
+            if data == "ping":
+                await websocket.send_text('{"type":"pong"}')
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        ws_manager.disconnect(websocket)
+
+
+@app.websocket("/ws/test-lab/{test_id}")
+async def websocket_test_lab_endpoint(websocket: WebSocket, test_id: str):
+    """Dedicated WebSocket stream for a specific test lab run."""
+    # Sanitize test_id
+    safe_test_id = test_id[:64]
+    await ws_manager.connect(websocket)
+    try:
+        await websocket.send_text(f'{{"type":"connected","test_id":"{safe_test_id}"}}')
+        while True:
+            data = await websocket.receive_text()
+            if len(data) > 16384:
+                await websocket.close(code=1009, reason="Payload too large")
+                break
+            if data == "ping":
+                await websocket.send_text('{"type":"pong"}')
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"Test Lab WebSocket error for {safe_test_id}: {e}")
+        ws_manager.disconnect(websocket)
+

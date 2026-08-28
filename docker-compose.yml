@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL 16 Timescale / SIEM DB
+  db:
+    image: postgres:16-alpine
+    container_name: qds_siem_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: qds_siem
+    ports:
+      - "5436:5432"
+    volumes:
+      - qds_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. FastAPI Quantum Cyber SIEM Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qds_siem_backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres123@db:5432/qds_siem
+      DATABASE_URL_SYNC: postgresql://postgres:postgres123@db:5432/qds_siem
+      SECRET_KEY: qds-siem-enterprise-secret-key-2026
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8000:8000"
+
+  # 3. Next.js 14 SOC Dashboard Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: qds_siem_frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE: http://localhost:8000
+      NEXT_PUBLIC_WS_BASE: ws://localhost:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  qds_postgres_data:
+    driver: local

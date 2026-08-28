@@ -71,15 +71,25 @@ async def seed_defaults():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure tables exist and seed initial defaults
+    # Startup: ensure tables exist and seed initial defaults with retry
     logger.info("Creating database tables if not existing...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    await seed_defaults()
-    logger.info("QDS SIEM Backend is ready.")
+    for attempt in range(1, 6):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            await seed_defaults()
+            logger.info("QDS SIEM Backend database initialized successfully.")
+            break
+        except Exception as e:
+            logger.warning(f"Database init attempt {attempt}/5 failed: {e}. Retrying in 3s...")
+            import asyncio
+            await asyncio.sleep(3)
     yield
     # Shutdown
-    await engine.dispose()
+    try:
+        await engine.dispose()
+    except Exception:
+        pass
     logger.info("Database connections closed.")
 
 

@@ -185,6 +185,26 @@ app.include_router(defense_router)
 app.include_router(security_router)
 
 
+@app.get("/")
+async def root():
+    """Root landing endpoint with system status and quick API links."""
+    return {
+        "message": "Quantum Digital Signature (QDS) SIEM Backend API is Live!",
+        "status": "online",
+        "version": "1.0.0",
+        "documentation": "/docs",
+        "endpoints": {
+            "swagger_docs": "/docs",
+            "health_check": "/api/health",
+            "dashboard_summary": "/api/dashboard/summary",
+            "threats": "/api/threats",
+            "events": "/api/events",
+            "test_lab_scenarios": "/api/test-lab/scenarios",
+            "defense_status": "/api/defense/status"
+        }
+    }
+
+
 @app.get("/api/health")
 async def health_check():
     """Backend health check endpoint."""

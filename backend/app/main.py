@@ -159,6 +159,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global Exception Handler
+import traceback
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled server error: {exc}\n{traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "traceback": traceback.format_exc()},
+    )
+
 # Mount Routers
 app.include_router(dashboard_router)
 app.include_router(events_router)

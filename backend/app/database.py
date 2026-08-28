@@ -14,10 +14,14 @@ engine_kwargs = {
     "pool_pre_ping": True,
 }
 
+import ssl
+
 connect_args = {}
-if "dpg-" in db_url and "render.com" not in db_url:
-    # Render internal network uses plain internal connection without TLS
-    connect_args["ssl"] = False
+if "dpg-" in db_url or "render.com" in db_url:
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    connect_args["ssl"] = ctx
 
 if connect_args:
     engine_kwargs["connect_args"] = connect_args

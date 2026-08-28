@@ -14,6 +14,14 @@ engine_kwargs = {
     "pool_pre_ping": True,
 }
 
+connect_args = {}
+if "dpg-" in db_url and "render.com" not in db_url:
+    # Render internal network uses plain internal connection without TLS
+    connect_args["ssl"] = False
+
+if connect_args:
+    engine_kwargs["connect_args"] = connect_args
+
 if "sqlite" not in db_url:
     engine_kwargs["pool_size"] = 5
     engine_kwargs["max_overflow"] = 10

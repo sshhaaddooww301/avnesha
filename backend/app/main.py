@@ -109,11 +109,22 @@ from app.security.rate_limiter import rate_limiter
 
 class SecurityEngineMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        client_ip = request.client.host if request.client else "127.0.0.1"
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "127.0.0.1"
+
         path = request.url.path
 
-        # 1. IP Firewall Check (except for internal health checks)
-        if not path.startswith("/api/health"):
+        # Whitelist health checks, openapi docs & swagger
+        if path in ["/api/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"]:
+            response: Response = await call_next(request)
+            response.headers["X-QDS-Defense-Posture"] = "ACTIVE_HARDENED"
+            return response
+
+        # 1. IP Firewall Check for public non-private IPs
+        if not ip_firewall._is_private_ip(client_ip):
             allowed, block_info = ip_firewall.check_ip(client_ip)
             if not allowed:
                 return JSONResponse(
@@ -125,23 +136,10 @@ class SecurityEngineMiddleware(BaseHTTPMiddleware):
                     },
                 )
 
-            # 2. Rate Limiting Check on API routes
-            if path.startswith("/api/"):
-                rl_allowed, rl_info = rate_limiter.check_rate_limit(client_ip)
-                if not rl_allowed:
-                    return JSONResponse(
-                        status_code=429,
-                        content={
-                            "error": "RATE_LIMIT_EXCEEDED",
-                            "message": "Too many requests. Temporary throttle active.",
-                            "rate_limit_info": rl_info,
-                        },
-                    )
-
-        # 3. Process Request
+        # 2. Process Request
         response: Response = await call_next(request)
 
-        # 4. Attach Security Headers
+        # 3. Attach Security Headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["X-XSS-Protection"] = "1; mode=block"

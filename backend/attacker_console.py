@@ -42,11 +42,44 @@ class RedTeamAttacker:
         except Exception:
             return False
 
+    def _send_attack_packet(self, payload: dict, packet_idx: int) -> dict:
+        """Send attack payload and print clear forensic status from SIEM."""
+        try:
+            res = requests.post(self.events_url, json=payload, timeout=5)
+            if res.status_code == 200:
+                data = res.json()
+                detected = data.get("threat_detected", False)
+                threat_type = data.get("threat_type", "N/A")
+                severity = data.get("severity", "LOW")
+                risk = data.get("risk_score", 0.0)
+                action = data.get("mitigation_action", "PROCESSED")
+                status_str = f"🚨 THREAT CAUGHT ({threat_type} | Risk: {risk} | Severity: {severity})" if detected else "✅ CLEAN TRAFFIC"
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | Result: {status_str} | Action: {action}")
+                return data
+            elif res.status_code == 403:
+                data = res.json()
+                err_msg = data.get("detail", {}).get("message") or data.get("message") or "Dropped by Quantum IPS"
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | 🛡️ BLOCKED AT INGRESS BY QUANTUM IPS: {err_msg}")
+                return data
+            elif res.status_code == 429:
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | ⏳ RATE LIMIT THROTTLED (HTTP 429)")
+                return {"throttled": True}
+            elif res.status_code == 422:
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | 🚫 REJECTED BY DEEP PAYLOAD SANITIZER (HTTP 422)")
+                return {"rejected": True}
+            else:
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | HTTP {res.status_code}: {res.text[:80]}")
+                return {}
+        except Exception as e:
+            print(f"  [Packet #{packet_idx}] Connection Error: {e}")
+            return {}
+
     def attack_mitm(self, count=1):
         print(f"\n[+] Infiltrating Quantum Channel with Intercept-Resend Eavesdropping ({count} packets)...")
+        nodes = ["QNode-Alpha-01", "QNode-Beta-02", "QNode-Gamma-03", "QNode-Delta-04"]
         for i in range(count):
             session_id = f"QDS-ATK-MITM-{uuid.uuid4().hex[:8].upper()}"
-            source = f"QNode-Alpha-01"
+            source = f"QNode-Eve-{random.randint(10, 99)}" if i > 1 else random.choice(nodes)
             noise = random.uniform(0.35, 0.65)
             observed = max(0.2, 1.0 - noise)
             
@@ -61,17 +94,15 @@ class RedTeamAttacker:
                 "signature_hash": generate_sha256(f"{session_id}:{source}"),
                 "metadata_json": {"attack": "MITM", "eavesdropper": "Eve-RedTeam-Laptop2"}
             }
-            res = requests.post(self.events_url, json=payload)
-            data = res.json()
-            threat = "CAUGHT (Threat Triggered)" if data.get("threat_detected") else "BYPASS"
-            print(f"  [Packet #{i+1}] Session: {session_id} | Result: {threat} | Threat Type: {data.get('threat_type')}")
+            self._send_attack_packet(payload, i + 1)
             time.sleep(0.3)
 
     def attack_forgery(self, count=1):
         print(f"\n[+] Forging Quantum Digital Signature Hashes ({count} packets)...")
+        nodes = ["QNode-Beta-02", "QNode-Gamma-03", "QNode-Delta-04"]
         for i in range(count):
             session_id = f"QDS-ATK-FORGE-{uuid.uuid4().hex[:8].upper()}"
-            source = "QNode-Beta-02"
+            source = random.choice(nodes)
             real_hash = generate_sha256(f"VALID:{session_id}")
             forged_hash = generate_sha256(f"TAMPERED-PAYLOAD-LAPTOP2-{uuid.uuid4().hex}")
             
@@ -90,17 +121,16 @@ class RedTeamAttacker:
                     "forgery_indicator": True,
                 }
             }
-            res = requests.post(self.events_url, json=payload)
-            data = res.json()
-            print(f"  [Packet #{i+1}] Hash: {forged_hash[:16]}... | SIEM Caught: {data.get('threat_detected')} | Rule: {data.get('threat_type')}")
+            self._send_attack_packet(payload, i + 1)
             time.sleep(0.3)
 
     def attack_replay(self, count=3):
         print(f"\n[+] Inundating Target with Replayed Old Valid Signatures ({count} packets)...")
-        replayed_hash = generate_sha256("REPLAYED-HISTORICAL-SIGNATURE-001")
+        replayed_hash = generate_sha256(f"REPLAYED-HISTORICAL-{uuid.uuid4().hex[:6]}")
+        nodes = ["QNode-Gamma-03", "QNode-Delta-04", "QNode-Alpha-01"]
         for i in range(count):
             session_id = f"QDS-ATK-RPL-{uuid.uuid4().hex[:8].upper()}"
-            source = "QNode-Gamma-03"
+            source = random.choice(nodes)
             
             payload = {
                 "session_id": session_id,
@@ -113,16 +143,14 @@ class RedTeamAttacker:
                 "signature_hash": replayed_hash,
                 "metadata_json": {"attack": "REPLAY", "replayed_hash": replayed_hash}
             }
-            res = requests.post(self.events_url, json=payload)
-            data = res.json()
-            print(f"  [Packet #{i+1}] Replaying Hash {replayed_hash[:16]}... | SIEM Detected: {data.get('threat_detected')}")
+            self._send_attack_packet(payload, i + 1)
             time.sleep(0.4)
 
     def attack_blinding(self):
         print("\n[+] Injecting Continuous-Wave (CW) High-Power Laser into SPAD Detectors...")
         payload = {
             "session_id": f"QDS-ATK-BLD-{uuid.uuid4().hex[:8].upper()}",
-            "source_node": "QNode-Alpha-01",
+            "source_node": f"QNode-SPAD-{random.randint(10, 99)}",
             "event_type": "QDS_DETECTOR_TELEMETRY",
             "quantum_state": "SPAD|CW-Laser-Saturated-Blinded⟩",
             "expected_measurement": 1.0,
@@ -136,15 +164,13 @@ class RedTeamAttacker:
                 "deadtime_variance_ns": 0.002,
             }
         }
-        res = requests.post(self.events_url, json=payload)
-        data = res.json()
-        print(f"  [+] Detector Saturated! SIEM Alert Triggered: {data.get('threat_detected')} | Severity: {data.get('severity')}")
+        self._send_attack_packet(payload, 1)
 
     def attack_pns(self):
         print("\n[+] Executing Photon Number Splitting (PNS) on Weak Faint Laser Pulses...")
         payload = {
             "session_id": f"QDS-ATK-PNS-{uuid.uuid4().hex[:8].upper()}",
-            "source_node": "QNode-Beta-02",
+            "source_node": f"QNode-Decoy-{random.randint(10, 99)}",
             "event_type": "QDS_DECOY_ANALYSIS",
             "quantum_state": "PNS-Decoy|Poisson-split⟩",
             "expected_measurement": 1.0,
@@ -157,6 +183,7 @@ class RedTeamAttacker:
                 "multi_photon_excess": 0.48,
             }
         }
+        self._send_attack_packet(payload, 1)
     def attack_ddos(self, count=40):
         print(f"\n[+] Launching DDoS / High-Volume Rate Inundation ({count} packets rapid-fire)...")
         blocked_count = 0

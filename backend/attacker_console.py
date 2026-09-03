@@ -53,25 +53,25 @@ class RedTeamAttacker:
                 severity = data.get("severity", "LOW")
                 risk = data.get("risk_score", 0.0)
                 action = data.get("mitigation_action", "PROCESSED")
-                status_str = f"🚨 THREAT CAUGHT ({threat_type} | Risk: {risk} | Severity: {severity})" if detected else "✅ CLEAN TRAFFIC"
+                status_str = f"[!] THREAT CAUGHT ({threat_type} | Risk: {risk} | Severity: {severity})" if detected else "[+] CLEAN TRAFFIC"
                 print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | Result: {status_str} | Action: {action}")
                 return data
             elif res.status_code == 403:
                 data = res.json()
                 err_msg = data.get("detail", {}).get("message") or data.get("message") or "Dropped by Quantum IPS"
-                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | 🛡️ BLOCKED AT INGRESS BY QUANTUM IPS: {err_msg}")
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | [BLOCKED AT INGRESS BY QUANTUM IPS] {err_msg}")
                 return data
             elif res.status_code == 429:
-                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | ⏳ RATE LIMIT THROTTLED (HTTP 429)")
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | [RATE LIMIT THROTTLED] (HTTP 429)")
                 return {"throttled": True}
             elif res.status_code == 422:
-                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | 🚫 REJECTED BY DEEP PAYLOAD SANITIZER (HTTP 422)")
+                print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | [REJECTED BY PAYLOAD VALIDATOR] (HTTP 422)")
                 return {"rejected": True}
             else:
                 print(f"  [Packet #{packet_idx}] Node: {payload.get('source_node')} | HTTP {res.status_code}: {res.text[:80]}")
                 return {}
         except Exception as e:
-            print(f"  [Packet #{packet_idx}] Connection Error: {e}")
+            print(f"  [Packet #{packet_idx}] Error: {e}")
             return {}
 
     def attack_mitm(self, count=1):

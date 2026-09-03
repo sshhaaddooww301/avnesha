@@ -76,7 +76,8 @@ async def lifespan(app: FastAPI):
     logger.info("Creating database tables if not existing...")
     # Always ensure lockdown is OFF on startup (prevents getting locked out after restart)
     ip_firewall.toggle_lockdown(False)
-    logger.info("QDS Security Firewall: Lockdown mode DEACTIVATED on startup.")
+    rate_limiter.clear_all_bans()
+    logger.info("QDS Security Firewall: Lockdown mode DEACTIVATED and rate limit bans CLEARED on startup.")
     for attempt in range(1, 6):
         try:
             async with engine.begin() as conn:
@@ -113,6 +114,10 @@ from app.security.rate_limiter import rate_limiter
 
 class SecurityEngineMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # 0. Always allow browser CORS preflight requests
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         forwarded = request.headers.get("x-forwarded-for")
         if forwarded:
             client_ip = forwarded.split(",")[0].strip()
@@ -121,8 +126,14 @@ class SecurityEngineMiddleware(BaseHTTPMiddleware):
 
         path = request.url.path
 
-        # Whitelist health checks, openapi docs & swagger
-        if path in ["/api/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"]:
+        # Whitelist root health page, openapi docs & swagger
+        if path in ["/", "/api/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"]:
+            response: Response = await call_next(request)
+            response.headers["X-QDS-Defense-Posture"] = "ACTIVE_HARDENED"
+            return response
+
+        # Whitelist trusted / private IPs
+        if ip_firewall._is_private_ip(client_ip) or client_ip in ip_firewall.whitelist:
             response: Response = await call_next(request)
             response.headers["X-QDS-Defense-Posture"] = "ACTIVE_HARDENED"
             return response

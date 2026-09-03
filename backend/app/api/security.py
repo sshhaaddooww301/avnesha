@@ -127,14 +127,24 @@ async def block_ip(request: IPActionRequest):
 
 @router.post("/ip/unblock")
 async def unblock_ip(request: IPActionRequest):
-    """Manually unblock an IP address."""
-    success = ip_firewall.unblock_ip(request.ip)
-    rate_limiter.auto_ban.unban(f"ip:{request.ip}")
-    if not success:
-        raise HTTPException(status_code=404, detail="IP is not in active blacklist")
+    """Manually unblock an IP address across both firewall and rate limiter."""
+    success_fw = ip_firewall.unblock_ip(request.ip)
+    success_rl = rate_limiter.auto_ban.unban(f"ip:{request.ip}")
     return {
         "status": "success",
-        "message": f"IP [{request.ip}] has been unblocked and reputation restored.",
+        "message": f"IP [{request.ip}] has been unblocked across firewall and rate limiter.",
+        "firewall_unblocked": success_fw,
+        "rate_limiter_unbanned": success_rl,
+    }
+
+
+@router.post("/rate-limit/reset")
+async def reset_rate_limits():
+    """Reset all active rate limiter bans, throttles, and counters."""
+    rate_limiter.clear_all_bans()
+    return {
+        "status": "success",
+        "message": "All rate limiter active bans, throttles, and sliding-window counters have been completely reset.",
     }
 
 

@@ -61,11 +61,11 @@ class SlidingWindowCounter:
 class AutoBanManager:
     """Tracks rate limit violations and auto-bans repeat offenders."""
 
-    # Exponential backoff durations in seconds
+    # Exponential backoff durations in seconds (1m -> 5m -> 15m)
     BAN_DURATIONS = [
-        900,     # 15 minutes (1st ban)
-        3600,    # 1 hour (2nd ban)
-        86400,   # 24 hours (3rd+ ban)
+        60,      # 1 minute (1st ban)
+        300,     # 5 minutes (2nd ban)
+        900,     # 15 minutes (3rd+ ban)
     ]
 
     def __init__(self):
@@ -73,11 +73,17 @@ class AutoBanManager:
         self.bans: Dict[str, Dict[str, Any]] = {}  # key → ban info
         self.total_bans: int = 0
 
+    def clear_all(self):
+        """Clear all active bans and violation records."""
+        self.bans.clear()
+        self.violations.clear()
+        logger.info("RATE LIMITER: Cleared all bans and violation counts.")
+
     def record_violation(self, key: str) -> Optional[Dict[str, Any]]:
         """Record a rate limit violation. Returns ban info if ban threshold reached."""
         self.violations[key] += 1
 
-        if self.violations[key] >= 3:
+        if self.violations[key] >= 10:
             return self._ban(key)
         return None
 
@@ -156,9 +162,9 @@ class RateLimiter:
 
     def __init__(
         self,
-        per_ip_limit: int = 30,
-        per_session_limit: int = 50,
-        global_limit: int = 200,
+        per_ip_limit: int = 600,
+        per_session_limit: int = 600,
+        global_limit: int = 5000,
         window_seconds: int = 60,
     ):
         self.per_ip_limit = per_ip_limit
@@ -173,6 +179,14 @@ class RateLimiter:
         self.total_rate_limited: int = 0
         self.total_requests: int = 0
 
+    def clear_all_bans(self):
+        """Reset all rate limiter counters and active bans."""
+        self.auto_ban.clear_all()
+        self.ip_counter.buckets.clear()
+        self.session_counter.buckets.clear()
+        self.global_counter.buckets.clear()
+        self.total_rate_limited = 0
+
     def check_rate_limit(
         self,
         ip_address: str,
@@ -186,9 +200,16 @@ class RateLimiter:
         """
         self.total_requests += 1
 
-        # Exempt loopback / local development IPs from rate limiting so dashboard is never throttled
+        # Exempt loopback / local development IPs and whitelisted IPs from rate limiting
         if ip_address in ["127.0.0.1", "::1", "localhost"]:
             return True, None
+
+        try:
+            from app.security.ip_firewall import ip_firewall
+            if ip_address in ip_firewall.whitelist or ip_firewall._is_private_ip(ip_address):
+                return True, None
+        except Exception:
+            pass
 
         # Check if IP is auto-banned
         banned, ban_info = self.auto_ban.is_banned(f"ip:{ip_address}")

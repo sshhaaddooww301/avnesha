@@ -218,20 +218,23 @@ class RedTeamAttacker:
 
 def main():
     parser = argparse.ArgumentParser(description="QDS Red-Team Remote Attack Console")
-    parser.add_argument("--target", default="http://10.85.193.131:8005", help="Target SIEM IP:Port (e.g. http://10.85.193.131:8005)")
+    parser.add_argument(
+        "--target",
+        default="https://qds-siem-backend.onrender.com",
+        help="Target SIEM URL (default: https://qds-siem-backend.onrender.com, or e.g. http://localhost:8000)"
+    )
     args = parser.parse_args()
 
     attacker = RedTeamAttacker(args.target)
 
     print("==============================================================")
-    print("   🔥 QDS RED TEAM ATTACK CONSOLE (LAPTOP 2 CONTROLLER)")
+    print("   🔥 QDS RED TEAM ATTACK CONSOLE (REMOTE / MULTI-LAPTOP)")
     print(f"   Target SIEM URL: {args.target}")
     print("==============================================================")
 
     if not attacker.check_connection():
         print(f"[!] Warning: Cannot reach target SIEM at {args.target}.")
-        print("    Make sure Laptop 1 backend is running with: uvicorn app.main:app --host 0.0.0.0 --port 8000")
-        print("    And check that both laptops are on the same Wi-Fi network.")
+        print("    Please ensure target backend is live and accessible over the internet or LAN.")
     else:
         print("[✓] Connected successfully to Target SIEM SOC!")
 

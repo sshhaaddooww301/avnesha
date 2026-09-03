@@ -140,7 +140,19 @@ class SecurityEngineMiddleware(BaseHTTPMiddleware):
                     },
                 )
 
-        # 2. Process Request
+        # 2. Rate Limiting Check
+        rate_allowed, rate_info = rate_limiter.check_rate_limit(client_ip)
+        if not rate_allowed:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "RATE_LIMIT_EXCEEDED",
+                    "message": "Too many requests — throttled by QDS Security Engine",
+                    "rate_limit_telemetry": rate_info,
+                },
+            )
+
+        # 3. Process Request
         response: Response = await call_next(request)
 
         # 3. Attach Security Headers
@@ -157,7 +169,7 @@ app.add_middleware(SecurityEngineMiddleware)
 # CORS Configuration (Supports Localhost, Vercel & Multi-Laptop LAN Demo)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -171,7 +183,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled server error: {exc}\n{traceback.format_exc()}")
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc), "traceback": traceback.format_exc()},
+        content={"detail": "Internal server error. Check backend logs for details."},
     )
 
 # Mount Routers

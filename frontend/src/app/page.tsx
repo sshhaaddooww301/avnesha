@@ -18,7 +18,7 @@ import {
   SeverityDistribution as SevDistType,
   TopOffense,
 } from "@/lib/types";
-import { ShieldCheck, Atom } from "lucide-react";
+import { ShieldCheck, Atom, Zap, RefreshCw } from "lucide-react";
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -30,6 +30,19 @@ export default function DashboardPage() {
   const [threatsList, setThreatsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [simModalOpen, setSimModalOpen] = useState(false);
+  const [isQuickDemoRunning, setIsQuickDemoRunning] = useState(false);
+
+  const handleQuickDemo = async () => {
+    try {
+      setIsQuickDemoRunning(true);
+      await api.runSimulator("attack_mix", 10, 0);
+      await loadData();
+    } catch (err) {
+      console.error("Quick demo failed:", err);
+    } finally {
+      setIsQuickDemoRunning(false);
+    }
+  };
 
   // Fetch all dashboard data from PostgreSQL
   const loadData = useCallback(async () => {
@@ -150,6 +163,45 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* Empty State / Quick Launch Banner for Demos */}
+        {summary?.total_events === 0 && !loading && (
+          <div className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-emerald-950/30 via-zinc-900/80 to-cyan-950/30 border border-emerald-500/30 shadow-2xl backdrop-blur-md">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1 max-w-2xl">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Ready For Evaluation
+                  </span>
+                  <span className="text-xs font-mono text-zinc-400">Database Initialized (0 Events)</span>
+                </div>
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">
+                  Welcome to QDS-SIEM — Ready for Quantum Verification & Threat Ingestion
+                </h2>
+                <p className="text-xs text-zinc-400 font-mono">
+                  Inject live quantum circuit telemetry with natural Bell-state noise and synthetic attacks (MITM, Replay, Forgery, PNS, Blinding) directly into the deterministic detection engine.
+                </p>
+              </div>
+              <button
+                onClick={handleQuickDemo}
+                disabled={isQuickDemoRunning}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-mono font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all transform active:scale-95 disabled:opacity-50 whitespace-nowrap cursor-pointer"
+              >
+                {isQuickDemoRunning ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                    <span>Injecting Quantum Stream...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 fill-black text-black" />
+                    <span>⚡ 1-Click Demo Injection</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Row 1: Alert Summary Cards */}
         <AlertCards summary={summary} loading={loading} />

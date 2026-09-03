@@ -14,7 +14,7 @@ export function useWebSocket(onMessage?: (msg: WebSocketMessage) => void) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connect = useCallback(() => {
-    const wsUrl = (process.env.NEXT_PUBLIC_WS_BASE || process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8005") + "/ws";
+    const wsUrl = (process.env.NEXT_PUBLIC_WS_BASE || process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8000") + "/ws";
 
     try {
       const ws = new WebSocket(wsUrl);

@@ -1,5 +1,5 @@
 """
-Detection rules for QDS SIEM.
+Detection rules for Q-Vajra.
 
 Each rule is a class with an `evaluate` method that returns:
   (triggered: bool, confidence: float, evidence: dict)

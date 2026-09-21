@@ -1,5 +1,5 @@
 """
-Security boundary and vulnerability regression tests for QDS SIEM backend.
+Security boundary and vulnerability regression tests for Q-Vajra backend.
 """
 
 import asyncio
@@ -7,7 +7,7 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 
 async def run_security_tests():
-    print("=== RUNNING QDS SIEM SECURITY REGRESSION SUITE ===")
+    print("=== RUNNING Q-Vajra SECURITY REGRESSION SUITE ===")
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         # 1. Test Health Endpoint & Security Headers

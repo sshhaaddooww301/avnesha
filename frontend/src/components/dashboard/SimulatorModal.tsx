@@ -54,9 +54,9 @@ export function SimulatorModal({ isOpen, onClose, onRunSuccess }: SimulatorModal
             </div>
             <div>
               <h3 className="text-sm font-bold text-white tracking-wide uppercase font-mono">
-                Teleportation-Based QDS Threat Simulator
+                Q-Vajra Threat Simulator
               </h3>
-              <p className="text-[11px] text-zinc-400">Simulate Bell-state teleportation QDS events & projective measurements</p>
+              <p className="text-[11px] text-zinc-400">Simulate Bell-state teleportation Quantum events & projective measurements</p>
             </div>
           </div>
           <button
@@ -157,7 +157,7 @@ export function SimulatorModal({ isOpen, onClose, onRunSuccess }: SimulatorModal
             className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-semibold bg-white hover:bg-zinc-100 text-zinc-950 shadow-md transition-all disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>{isRunning ? "Simulating QDS States..." : `Inject ${count} Events`}</span>
+            <span>{isRunning ? "Simulating Quantum States..." : `Inject ${count} Events`}</span>
           </button>
         </div>
       </div>

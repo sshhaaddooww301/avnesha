@@ -67,7 +67,7 @@ export function Navbar({ wsConnected = false, onRefresh, onRunSimulator }: Navba
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm tracking-wider text-white">QDS·SIEM</span>
+                <span className="font-bold text-sm tracking-wider text-white">Q-VAJRA</span>
                 <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono">
                   ENTERPRISE SOC
                 </span>

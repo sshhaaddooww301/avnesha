@@ -1,5 +1,5 @@
 """
-PDF Report Generation for QDS SIEM.
+PDF Report Generation for Q-Vajra.
 
 Generates professional security assessment reports with:
 - Threat detection statistics
@@ -177,7 +177,7 @@ def _add_page_bg(canvas, doc):
     canvas.setFillColor(COLOR_ACCENT)
     canvas.drawCentredString(
         A4[0] / 2, 10 * mm,
-        f"QDS SIEM  •  Quantum-Inspired Cyber Threat Detection  •  Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}  •  Page {doc.page}"
+        f"Q-Vajra  •  Quantum-Inspired Cyber Threat Detection  •  Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}  •  Page {doc.page}"
     )
     canvas.restoreState()
 
@@ -532,7 +532,7 @@ async def generate_pdf_report(
     story.append(Spacer(1, 10 * mm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=COLOR_BORDER, spaceAfter=5 * mm))
     story.append(Paragraph(
-        "End of Report — QDS SIEM Quantum-Inspired Cyber Threat Detection Framework",
+        "End of Report — Q-Vajra Quantum-Inspired Cyber Threat Detection Framework",
         styles["FooterStyle"]
     ))
 

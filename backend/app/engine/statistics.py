@@ -1,5 +1,5 @@
 """
-Statistical analysis module for QDS SIEM Detection Engine.
+Statistical analysis module for Q-Vajra Detection Engine.
 
 All calculations are mathematically rigorous — no fake values.
 Functions operate on sequences of float measurements.

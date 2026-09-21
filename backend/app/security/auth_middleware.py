@@ -31,7 +31,7 @@ class APIKeyManager:
 
     def __init__(self):
         # Default master key (should be overridden via env/settings)
-        self._master_secret = "qds-siem-master-secret-2024"
+        self._master_secret = "q-vajra-master-secret-2024"
 
         # Active API keys: key_id → key_info
         self.api_keys: Dict[str, Dict[str, Any]] = {}

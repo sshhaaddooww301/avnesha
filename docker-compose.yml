@@ -33,7 +33,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres123@db:5432/qds_siem
       DATABASE_URL_SYNC: postgresql://postgres:postgres123@db:5432/qds_siem
-      SECRET_KEY: qds-siem-enterprise-secret-key-2026
+      SECRET_KEY: q-vajra-enterprise-secret-key-2026
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
     ports:
       - "8000:8000"

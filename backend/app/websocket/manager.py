@@ -1,5 +1,5 @@
 """
-WebSocket Connection Manager for QDS SIEM.
+WebSocket Connection Manager for Q-Vajra.
 
 Manages real-time connections from dashboard clients.
 Broadcasts new events and threats as they are detected.

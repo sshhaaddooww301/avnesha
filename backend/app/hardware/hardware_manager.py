@@ -1,5 +1,5 @@
 """
-Hardware Link Manager for Q-Vajra.
+Hardware Link Manager for QDS-SIEM.
 
 Manages physical link state, live optical telemetry statistics,
 and hardware interfaces (ETSI 014, Serial COM, TCP Raw Sockets).

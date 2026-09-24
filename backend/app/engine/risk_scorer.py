@@ -1,5 +1,5 @@
 """
-Risk Score Calculator for Q-Vajra.
+Risk Score Calculator for QDS-SIEM.
 
 Multi-factor weighted scoring formula:
 

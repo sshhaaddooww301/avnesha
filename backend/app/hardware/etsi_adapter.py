@@ -34,7 +34,7 @@ class ETSI014TelemetryPayload(BaseModel):
 
 def normalize_etsi_to_qds_event(telemetry: ETSI014TelemetryPayload) -> Dict[str, Any]:
     """
-    Translates raw ETSI 014 physical hardware telemetry into a normalized Q-Vajra Security Event.
+    Translates raw ETSI 014 physical hardware telemetry into a normalized QDS-SIEM Security Event.
     """
     qber = telemetry.quantum_bit_error_rate
     # In ideal Bell / QDS states, correlation = 1 - QBER

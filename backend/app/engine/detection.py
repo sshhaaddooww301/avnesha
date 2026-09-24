@@ -1,5 +1,5 @@
 """
-Main Detection Pipeline for Q-Vajra.
+Main Detection Pipeline for QDS-SIEM.
 
 Flow:
 1. Receive event

@@ -54,7 +54,7 @@ export function SimulatorModal({ isOpen, onClose, onRunSuccess }: SimulatorModal
             </div>
             <div>
               <h3 className="text-sm font-bold text-white tracking-wide uppercase font-mono">
-                Q-Vajra Threat Simulator
+                QDS-SIEM Threat Simulator
               </h3>
               <p className="text-[11px] text-zinc-400">Simulate Bell-state teleportation Quantum events & projective measurements</p>
             </div>

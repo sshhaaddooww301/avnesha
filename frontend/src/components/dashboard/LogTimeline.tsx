@@ -18,7 +18,7 @@ export function LogTimeline({ logs, loading = false }: LogTimelineProps) {
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-zinc-400" />
           <h3 className="text-xs font-semibold text-white tracking-wider uppercase font-mono">
-            Q-Vajra Verification Telemetry Stream
+            QDS-SIEM Verification Telemetry Stream
           </h3>
         </div>
         <Link
@@ -37,7 +37,7 @@ export function LogTimeline({ logs, loading = false }: LogTimelineProps) {
           <EmptyState
             icon="radio"
             title="No Security Events Available"
-            message="No Q-Vajra measurement or verification events recorded yet."
+            message="No QDS-SIEM measurement or verification events recorded yet."
           />
         ) : (
           logs.map((log) => (

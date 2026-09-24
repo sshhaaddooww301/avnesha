@@ -17,7 +17,7 @@ endpoints = [
     "/api/hardware/status",
 ]
 
-print("=== Q-Vajra SYSTEM INTEGRATION TESTS ===")
+print("=== QDS-SIEM SYSTEM INTEGRATION TESTS ===")
 passed = 0
 for ep in endpoints:
     url = f"http://127.0.0.1:8000{ep}"

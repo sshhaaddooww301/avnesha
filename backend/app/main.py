@@ -1,5 +1,5 @@
 """
-Main FastAPI application entry point for Q-Vajra.
+Main FastAPI application entry point for QDS-SIEM.
 """
 
 import logging
@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
             await seed_defaults()
-            logger.info("Q-Vajra Backend database initialized successfully.")
+            logger.info("QDS-SIEM Backend database initialized successfully.")
             break
         except Exception as e:
             logger.warning(f"Database init attempt {attempt}/5 failed: {e}. Retrying in 3s...")
@@ -237,7 +237,7 @@ async def health_check():
     """Backend health check endpoint."""
     return {
         "status": "healthy",
-        "service": "Q-Vajra Detection Engine",
+        "service": "QDS-SIEM Detection Engine",
         "active_ws_clients": ws_manager.connection_count,
     }
 

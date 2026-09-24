@@ -1,5 +1,5 @@
 """
-Advanced Detection Rules for Q-Vajra.
+Advanced Detection Rules for QDS-SIEM.
 
 5 hardcore rules that catch attacks the basic rules miss:
 - QDS-DDoS-001: DDoS/Flood Detection

@@ -176,7 +176,7 @@ export default function DashboardPage() {
                   <span className="text-xs font-mono text-zinc-400">Database Initialized (0 Events)</span>
                 </div>
                 <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">
-                  Welcome to Q-VAJRA — Ready for Quantum Verification & Threat Ingestion
+                  Welcome to QDS-SIEM — Ready for Quantum Verification & Threat Ingestion
                 </h2>
                 <p className="text-xs text-zinc-400 font-mono">
                   Inject live quantum circuit telemetry with natural Bell-state noise and synthetic attacks (MITM, Replay, Forgery, PNS, Blinding) directly into the deterministic detection engine.
@@ -195,7 +195,7 @@ export default function DashboardPage() {
                 ) : (
                   <>
                     <Zap className="w-4 h-4 fill-black text-black" />
-                    <span>⚡ 1-Click Demo Injection</span>
+                    <span> 1-Click Demo Injection</span>
                   </>
                 )}
               </button>

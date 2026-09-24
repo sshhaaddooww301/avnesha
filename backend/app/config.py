@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL_SYNC: str = "postgresql://postgres:postgres@localhost:5432/qds_siem"
 
     # Security
-    SECRET_KEY: str = "q-vajra-secret-key-change-in-production"
+    SECRET_KEY: str = "qds-siem-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 

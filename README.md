@@ -77,4 +77,4 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ## 👥 Team
 
-- **Team Shadow / Avnesha** — Smart India Hackathon (SIH)
+- **Team AtharvaX 
